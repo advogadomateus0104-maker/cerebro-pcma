@@ -2,6 +2,10 @@
 
 Cópia fiel do site original (ChatGPT Sites, versão 12, commit `ddebbe0`), migrada para **GitHub Pages + Supabase**.
 
+- Site: https://advogadomateus0104-maker.github.io/cerebro-pcma/
+- Banco: projeto Supabase `cerebro-pcma` (região São Paulo), organização da conta GitHub advogadomateus0104-maker.
+- Instalação do banco (já feita): conteúdo de `supabase/COLAR-NO-SUPABASE.sql` executado no SQL Editor.
+
 ## Onde fica cada coisa
 
 | O quê | Arquivo |
