@@ -22,7 +22,8 @@ async function rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
     method: 'POST',
     headers: {
       apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      // Chaves antigas (JWT "anon") também vão no Authorization; as novas (sb_publishable_) só no apikey.
+      ...(SUPABASE_ANON_KEY.startsWith('eyJ') ? { Authorization: `Bearer ${SUPABASE_ANON_KEY}` } : {}),
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(args),
