@@ -57,6 +57,10 @@ export default function ExamRunner({ exam }: { exam: PublicExam }) {
   const [showReview, setShowReview] = useState(false);
   const [error, setError] = useState('');
   const finishing = useRef(false);
+  // Nova tentativa automática de entrega quando o tempo acaba e o servidor não responde
+  // (evita reenviar a cada segundo e a tela ficar piscando).
+  const retryTimer = useRef<number | null>(null);
+  useEffect(() => () => { if (retryTimer.current) window.clearTimeout(retryTimer.current); }, []);
   const supportsElimination = exam.id !== '01';
 
   const answeredCount = Object.keys(answers).length;
@@ -97,6 +101,7 @@ export default function ExamRunner({ exam }: { exam: PublicExam }) {
     if (finishing.current || !attemptKey || !candidateName) return;
     if (!automatic && !window.confirm('Encerrar e entregar a prova? Depois da entrega, as respostas não poderão ser alteradas.')) return;
     finishing.current = true;
+    if (retryTimer.current) { window.clearTimeout(retryTimer.current); retryTimer.current = null; }
     setPhase('submitting');
     setError('');
     const elapsedSeconds = Math.min(exam.durationSeconds, Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
@@ -116,12 +121,21 @@ export default function ExamRunner({ exam }: { exam: PublicExam }) {
       persist({ phase: 'finished', candidateName, attemptKey, startedAt, deadlineAt, answers: finalResult.answers, discarded, result: finalResult });
       window.dispatchEvent(new Event('cerebro-progress-updated'));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Não foi possível entregar a prova.');
-      setPhase('running');
+      const message = cause instanceof Error ? cause.message : 'Não foi possível entregar a prova.';
+      if (automatic) {
+        // Tempo esgotado: mantém a prova bloqueada e tenta de novo em 20 s.
+        setError(`${message} Suas respostas estão salvas neste aparelho; nova tentativa de entrega em instantes.`);
+        retryTimer.current = window.setTimeout(() => { retryTimer.current = null; void submitAttemptRef.current(true); }, 20000);
+      } else {
+        setError(message);
+        setPhase('running');
+      }
     } finally {
       finishing.current = false;
     }
   }, [answers, attemptKey, candidateName, deadlineAt, discarded, exam.durationSeconds, exam.id, persist, startedAt]);
+  const submitAttemptRef = useRef(submitAttempt);
+  useEffect(() => { submitAttemptRef.current = submitAttempt; }, [submitAttempt]);
 
   useEffect(() => {
     if (phase !== 'running') return;
@@ -237,7 +251,7 @@ export default function ExamRunner({ exam }: { exam: PublicExam }) {
     return (
       <section className="resultScreen">
         {phase === 'submitting' ? (
-          <div className="resultPanel"><p className="eyebrow">Processando entrega</p><h1>Calculando seu resultado…</h1><p>Aguarde enquanto a prova é registrada no ranking.</p></div>
+          <div className="resultPanel"><p className="eyebrow">Processando entrega</p><h1>Calculando seu resultado…</h1><p>Aguarde enquanto a prova é registrada no ranking.</p>{error && <><p className="formError">{error}</p><div className="resultActions"><button className="primaryAction" onClick={() => void submitAttempt(true)}>TENTAR ENTREGAR AGORA</button></div></>}</div>
         ) : result && (
           <div className="resultPanel">
             <p className="eyebrow">Prova encerrada · Simulado {examNumber}</p>
@@ -264,6 +278,7 @@ export default function ExamRunner({ exam }: { exam: PublicExam }) {
         <div className="runnerProgress"><i style={{ width: `${progress}%` }} /><span>{answeredCount}/{exam.questions.length} respondidas</span></div>
         {reviewing ? <button onClick={() => setShowReview(false)}>VOLTAR AO RESULTADO</button> : <button onClick={() => void submitAttempt(false)} disabled={phase === 'submitting'}>ENCERRAR PROVA</button>}
       </header>
+      {error && phase === 'running' && <p className="formError" role="alert" style={{ margin: '12px auto', maxWidth: 1180, padding: '0 16px' }}>{error}</p>}
       <div className="runnerLayout">
         <section className="questionList">
           {!reviewing && supportsElimination && <div className="eliminationHint"><b>Eliminação estratégica</b><span>Clique com o botão direito sobre uma alternativa para riscá-la. Clique novamente para restaurá-la.</span></div>}

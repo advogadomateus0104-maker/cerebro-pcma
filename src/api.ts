@@ -18,7 +18,11 @@ class ApiError extends Error {
 }
 
 async function rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
+  // Tempo-limite: se o servidor não responder em 20 s, a tela não fica presa em "carregando".
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 20000);
   const response = await nativeFetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+    signal: controller.signal,
     method: 'POST',
     headers: {
       apikey: SUPABASE_ANON_KEY,
@@ -29,7 +33,7 @@ async function rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
     body: JSON.stringify(args),
     cache: 'no-store',
   });
-  const text = await response.text();
+  const text = await response.text().finally(() => window.clearTimeout(timeout));
   const payload = text ? JSON.parse(text) : null;
   if (!response.ok) {
     const message: string = payload?.message ?? 'Falha de comunicação com o servidor.';
