@@ -15,6 +15,8 @@ type FinishResult = {
   position: number | null;
   answers: Record<string, string>;
   review: ReviewItem[];
+  /** Corrigida no aparelho porque o banco estava fora; vai ao ranking depois. */
+  offline?: boolean;
 };
 
 const letters = ['a', 'b', 'c', 'd', 'e'];
@@ -258,6 +260,7 @@ export default function ExamRunner({ exam }: { exam: PublicExam }) {
             <span className="scoreNumber">{result.score}<small>/ {result.total}</small></span>
             <h1>{result.candidateName}, sua prova foi registrada.</h1>
             <div className="resultFacts"><span><b>{Math.round(result.score/result.total*100)}%</b> aproveitamento</span><span><b>{formatTime(result.elapsedSeconds)}</b> tempo utilizado</span><span><b>{result.position ? `${result.position}º` : '—'}</b> posição atual</span></div>
+            {result.offline && <p style={{ color: '#f5d477' }}>O servidor do ranking está indisponível agora. Sua nota foi calculada e salva neste aparelho e será enviada ao ranking automaticamente quando a conexão voltar.</p>}
             <p>Agora o gabarito comentado está liberado. Você também pode iniciar outra tentativa; esta entrega continuará registrada no ranking.</p>
             <div className="resultActions">
               <button className="primaryAction" onClick={() => setShowReview(true)}>REVISAR SIMULADO</button>
