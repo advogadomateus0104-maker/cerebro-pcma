@@ -1,9 +1,9 @@
 name: Manter banco do ranking ativo
 # O plano gratuito do Supabase pausa projetos com pouco uso.
-# Esta rotina consulta o ranking a cada 2 dias para mantê-lo ativo.
+# O Supabase recomenda algumas consultas por dia; esta rotina consulta o banco 4 vezes ao dia.
 on:
   schedule:
-    - cron: '17 11 */2 * *'
+    - cron: '17 */6 * * *'
   workflow_dispatch:
 jobs:
   ping:
@@ -16,3 +16,6 @@ jobs:
           curl -fsS -m 30 -X POST "$VITE_SUPABASE_URL/rest/v1/rpc/get_ranking" \
             -H "apikey: $VITE_SUPABASE_ANON_KEY" -H 'Content-Type: application/json' \
             -d '{"p_exam":"01","p_limit":1}'
+          curl -fsS -m 30 -X POST "$VITE_SUPABASE_URL/rest/v1/rpc/candidate_attempts" \
+            -H "apikey: $VITE_SUPABASE_ANON_KEY" -H 'Content-Type: application/json' \
+            -d '{"p_name":"mateus"}' > /dev/null
